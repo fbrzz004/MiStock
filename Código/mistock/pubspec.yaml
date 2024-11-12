@@ -1,0 +1,29 @@
+name: mistock
+description: Aplicación Flutter para gestión de inventario y ventas.
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^1.1.6
+  cupertino_icons: ^1.0.2
+  google_fonts: ^4.0.4
+  sqflite: ^2.0.0+4
+  path_provider: ^2.0.11
+  path: ^1.8.2
+  image_picker: ^0.8.5+3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/default_profile.png
+    - assets/logo_mistock.png
