@@ -1,3 +1,16 @@
+buildscript {
+    ext.kotlin_version = '1.8.22'  // Mantén esta versión si es compatible
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.2'  // Versión recomendada del AGP
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // No es necesario incluir el plugin de Flutter aquí
+    }
+}
+
 allprojects {
     repositories {
         google()

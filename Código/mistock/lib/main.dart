@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(MiStockApp());
@@ -18,7 +18,7 @@ class MiStockApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        textTheme: GoogleFonts.latoTextTheme(),
+        fontFamily: 'Roboto',
       ),
       home: LoginPage(),
     );
@@ -39,7 +39,8 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    Directory documentsDirectory =
+        await getApplicationDocumentsDirectory();
     String path = p.join(documentsDirectory.path, 'mistock.db');
     return await openDatabase(
       path,
@@ -176,7 +177,6 @@ class DatabaseHelper {
     );
   }
 
-  // Métodos CRUD para ventas
   Future<int> agregarVenta(Map<String, dynamic> venta) async {
     Database db = await database;
     return await db.insert('ventas', venta);
@@ -184,7 +184,11 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> obtenerVentas() async {
     Database db = await database;
-    return await db.query('ventas');
+    return await db.rawQuery('''
+      SELECT ventas.*, productos.nombre as nombreProducto
+      FROM ventas
+      INNER JOIN productos ON ventas.productoId = productos.id
+    ''');
   }
 
   Future<int> agregarPago(Map<String, dynamic> pago) async {
@@ -205,6 +209,15 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [pago['id']],
     );
+  }
+
+  Future<List<Map<String, dynamic>>> obtenerProductosConVentas() async {
+    Database db = await database;
+    return await db.rawQuery('''
+      SELECT productos.*, 
+      IFNULL((SELECT SUM(cantidad) FROM ventas WHERE ventas.productoId = productos.id), 0) as ventas
+      FROM productos
+    ''');
   }
 }
 
@@ -238,8 +251,8 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(width: 10),
                     Text(
                       'MiStock',
-                      style:
-                          TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 32, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -311,7 +324,8 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => MainPage(usuario: usuario),
+                            builder: (context) =>
+                                MainPage(usuario: usuario),
                           ),
                         );
                       } else {
@@ -336,7 +350,8 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => RegisterPage1()),
+                      MaterialPageRoute(
+                          builder: (context) => RegisterPage1()),
                     );
                   },
                   child: Text('Regístrate ahora'),
@@ -383,8 +398,8 @@ class _RegisterPage1State extends State<RegisterPage1> {
                   SizedBox(width: 10),
                   Text(
                     'MiStock',
-                    style:
-                        TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -477,7 +492,8 @@ class _RegisterPage1State extends State<RegisterPage1> {
                           nombres: nombresController.text,
                           apellidos: apellidosController.text,
                           tipoDocumento: tipoDocumentoSeleccionado,
-                          numeroDocumento: numeroDocumentoController.text,
+                          numeroDocumento:
+                              numeroDocumentoController.text,
                           telefono: telefonoController.text,
                         ),
                       ),
@@ -544,8 +560,8 @@ class _RegisterPage2State extends State<RegisterPage2> {
                   SizedBox(width: 10),
                   Text(
                     'MiStock',
-                    style:
-                        TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 32, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -858,13 +874,19 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context, index) {
                         final venta = ventas[index];
                         return ListTile(
-                          title: Text('Producto ID: ${venta['productoId']}'),
-                          subtitle: Text(venta['fecha']),
+                          title:
+                              Text('Producto: ${venta['nombreProducto']}'),
+                          subtitle: Text(
+                            DateFormat('HH:mm').format(
+                              DateTime.parse(venta['fecha']),
+                            ),
+                          ),
                           trailing: Text('\$${venta['montoTotal']}'),
                           onTap: () {
                             showDialog(
                               context: context,
-                              builder: (context) => VerVentaPopup(venta: venta),
+                              builder: (context) =>
+                                  VerVentaPopup(venta: venta),
                             );
                           },
                         );
@@ -1016,11 +1038,12 @@ class VerVentaPopup extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Producto ID: ${venta['productoId']}'),
+          Text('Producto: ${venta['nombreProducto']}'),
           Text('Precio unitario: \$${precioUnitario.toStringAsFixed(2)}'),
           Text('Cantidad total: ${venta['cantidad']}'),
           Text('Monto total: \$${venta['montoTotal']}'),
-          Text('Fecha y hora registrada: ${venta['fecha']}'),
+          Text(
+              'Fecha y hora registrada: ${DateFormat('HH:mm').format(DateTime.parse(venta['fecha']))}'),
         ],
       ),
       actions: [
@@ -1069,8 +1092,8 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 
   Future<void> _cambiarFotoPerfil() async {
-    final pickedFile =
-        await picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery, imageQuality: 50);
     if (pickedFile != null) {
       setState(() {
         imagenPerfil = File(pickedFile.path);
@@ -1125,63 +1148,75 @@ class _PerfilPageState extends State<PerfilPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: editar ? _cambiarFotoPerfil : null,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: imagenPerfil != null
-                    ? FileImage(imagenPerfil!)
-                    : AssetImage('assets/default_profile.png')
-                        as ImageProvider,
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: editar ? _cambiarFotoPerfil : null,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: imagenPerfil != null
+                      ? FileImage(imagenPerfil!)
+                      : AssetImage('assets/default_profile.png')
+                          as ImageProvider,
+                ),
               ),
-            ),
-            SizedBox(height: 20),
-            editar
-                ? TextField(
-                    controller: nombresController,
-                    decoration: InputDecoration(labelText: 'Nombres'),
-                  )
-                : Text('Nombres: ${nombresController.text}'),
-            editar
-                ? TextField(
-                    controller: apellidosController,
-                    decoration: InputDecoration(labelText: 'Apellidos'),
-                  )
-                : Text('Apellidos: ${apellidosController.text}'),
-            editar
-                ? TextField(
-                    controller: correoController,
-                    decoration: InputDecoration(labelText: 'Correo'),
-                  )
-                : Text('Correo: ${correoController.text}'),
-            SizedBox(height: 20),
-            editar
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _guardarCambios,
-                        child: Text('Guardar'),
-                      ),
-                      TextButton(
-                        onPressed: _cancelarEdicion,
-                        child: Text('Cancelar'),
-                      ),
-                    ],
-                  )
-                : ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        editar = true;
-                      });
-                    },
-                    child: Text('Editar datos'),
-                  ),
-          ],
+              SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.person),
+                title: editar
+                    ? TextField(
+                        controller: nombresController,
+                        decoration: InputDecoration(labelText: 'Nombres'),
+                      )
+                    : Text('Nombres: ${nombresController.text}'),
+              ),
+              ListTile(
+                leading: Icon(Icons.person_outline),
+                title: editar
+                    ? TextField(
+                        controller: apellidosController,
+                        decoration: InputDecoration(labelText: 'Apellidos'),
+                      )
+                    : Text('Apellidos: ${apellidosController.text}'),
+              ),
+              ListTile(
+                leading: Icon(Icons.email),
+                title: editar
+                    ? TextField(
+                        controller: correoController,
+                        decoration: InputDecoration(labelText: 'Correo'),
+                      )
+                    : Text('Correo: ${correoController.text}'),
+              ),
+              SizedBox(height: 20),
+              editar
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _guardarCambios,
+                          child: Text('Guardar'),
+                        ),
+                        TextButton(
+                          onPressed: _cancelarEdicion,
+                          child: Text('Cancelar'),
+                        ),
+                      ],
+                    )
+                  : ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          editar = true;
+                        });
+                      },
+                      child: Text('Editar datos'),
+                    ),
+            ],
+          ),
         ),
       ),
     );
@@ -1405,7 +1440,7 @@ class _RegistrarClientePopupState extends State<RegistrarClientePopup> {
                 decoration: InputDecoration(labelText: 'Fecha de pago'),
                 readOnly: true,
                 onTap: () async {
-                  FocusScope.of(context).requestFocus(new FocusNode());
+                  FocusScope.of(context).unfocus();
                   fechaSeleccionada = await showDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
@@ -1413,8 +1448,10 @@ class _RegistrarClientePopupState extends State<RegistrarClientePopup> {
                     lastDate: DateTime(2100),
                   );
                   if (fechaSeleccionada != null) {
-                    fechaController.text =
-                        fechaSeleccionada!.toLocal().toString().split(' ')[0];
+                    fechaController.text = fechaSeleccionada!
+                        .toLocal()
+                        .toString()
+                        .split(' ')[0];
                   }
                 },
                 validator: (value) {
@@ -1518,7 +1555,8 @@ class _InventarioPageState extends State<InventarioPage> {
   }
 
   void cargarProductos() async {
-    List<Map<String, dynamic>> data = await dbHelper.obtenerProductos();
+    List<Map<String, dynamic>> data =
+        await dbHelper.obtenerProductosConVentas();
     setState(() {
       productos = data;
     });
@@ -1538,6 +1576,11 @@ class _InventarioPageState extends State<InventarioPage> {
   Widget build(BuildContext context) {
     int ventasMes = 1000;
     String mesActual = '${DateTime.now().month}/${DateTime.now().year}';
+
+    double totalVentas = productos.fold(
+        0.0,
+        (sum, producto) =>
+            sum + ((producto['ventas'] ?? 0) as num).toDouble());
 
     return Scaffold(
       appBar: AppBar(
@@ -1567,6 +1610,7 @@ class _InventarioPageState extends State<InventarioPage> {
                 ],
               ),
             ),
+            SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -1582,22 +1626,35 @@ class _InventarioPageState extends State<InventarioPage> {
                       Text('Mayores ventas'),
                     ],
                   ),
+                  SizedBox(height: 10),
                   ...productos.map((producto) {
+                    double ventasProducto =
+                        ((producto['ventas'] ?? 0) as num).toDouble();
+                    double porcentaje = totalVentas > 0
+                        ? ventasProducto / totalVentas
+                        : 0;
                     return Row(
                       children: [
-                        Text(producto['nombre']),
                         Expanded(
+                          flex: 2,
+                          child: Text(producto['nombre']),
+                        ),
+                        Expanded(
+                          flex: 5,
                           child: LinearProgressIndicator(
-                            value: 0.5,
+                            value: porcentaje,
                           ),
                         ),
-                        Text('50%'),
+                        SizedBox(width: 10),
+                        Text(
+                            '${(porcentaje * 100).toStringAsFixed(1)}%'),
                       ],
                     );
                   }).toList(),
                 ],
               ),
             ),
+            SizedBox(height: 10),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -1659,7 +1716,8 @@ class RegistrarProductoPopup extends StatefulWidget {
   RegistrarProductoPopup({required this.agregarProducto});
 
   @override
-  _RegistrarProductoPopupState createState() => _RegistrarProductoPopupState();
+  _RegistrarProductoPopupState createState() =>
+      _RegistrarProductoPopupState();
 }
 
 class _RegistrarProductoPopupState extends State<RegistrarProductoPopup> {
@@ -1691,7 +1749,8 @@ class _RegistrarProductoPopupState extends State<RegistrarProductoPopup> {
               ),
               TextFormField(
                 controller: nombreController,
-                decoration: InputDecoration(labelText: 'Nombre de producto'),
+                decoration:
+                    InputDecoration(labelText: 'Nombre de producto'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Ingrese el nombre del producto';
@@ -1701,7 +1760,8 @@ class _RegistrarProductoPopupState extends State<RegistrarProductoPopup> {
               ),
               TextFormField(
                 controller: unidadController,
-                decoration: InputDecoration(labelText: 'Unidad de medida'),
+                decoration:
+                    InputDecoration(labelText: 'Unidad de medida'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Ingrese la unidad de medida';
@@ -1724,7 +1784,8 @@ class _RegistrarProductoPopupState extends State<RegistrarProductoPopup> {
               ),
               TextFormField(
                 controller: precioController,
-                decoration: InputDecoration(labelText: 'Precio unitario'),
+                decoration:
+                    InputDecoration(labelText: 'Precio unitario'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null ||
@@ -1771,7 +1832,8 @@ class VistaProductoPopup extends StatelessWidget {
   final Map<String, dynamic> producto;
   final Function(int) eliminarProducto;
 
-  VistaProductoPopup({required this.producto, required this.eliminarProducto});
+  VistaProductoPopup(
+      {required this.producto, required this.eliminarProducto});
 
   @override
   Widget build(BuildContext context) {
@@ -1830,8 +1892,10 @@ class _PagosPageState extends State<PagosPage> {
   void cargarPagos() async {
     List<Map<String, dynamic>> data = await dbHelper.obtenerPagos();
     setState(() {
-      pagosCancelados = data.where((p) => p['estado'] == 'Cancelado').toList();
-      pagosPendientes = data.where((p) => p['estado'] == 'Pendiente').toList();
+      pagosCancelados =
+          data.where((p) => p['estado'] == 'Cancelado').toList();
+      pagosPendientes =
+          data.where((p) => p['estado'] == 'Pendiente').toList();
     });
   }
 
@@ -1844,12 +1908,18 @@ class _PagosPageState extends State<PagosPage> {
   Widget build(BuildContext context) {
     double montoTotalCanceladas = pagosCancelados.fold<double>(
         0,
-        (sum, item) => sum +
-            (item['monto'] != null ? double.parse(item['monto'].toString()) : 0));
+        (sum, item) =>
+            sum +
+            (item['monto'] != null
+                ? double.parse(item['monto'].toString())
+                : 0));
     double montoTotalPendientes = pagosPendientes.fold<double>(
         0,
-        (sum, item) => sum +
-            (item['monto'] != null ? double.parse(item['monto'].toString()) : 0));
+        (sum, item) =>
+            sum +
+            (item['monto'] != null
+                ? double.parse(item['monto'].toString())
+                : 0));
 
     return Scaffold(
       appBar: AppBar(
@@ -1876,7 +1946,8 @@ class _PagosPageState extends State<PagosPage> {
                   ),
                   Text(
                       'Monto total: \$${montoTotalCanceladas.toStringAsFixed(2)}'),
-                  Text('Fecha: ${DateTime.now().toLocal()}'),
+                  Text(
+                      'Fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'),
                 ],
               ),
             ),
@@ -1897,7 +1968,8 @@ class _PagosPageState extends State<PagosPage> {
                   ),
                   Text(
                       'Monto total: \$${montoTotalPendientes.toStringAsFixed(2)}'),
-                  Text('Fecha: ${DateTime.now().toLocal()}'),
+                  Text(
+                      'Fecha: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'),
                 ],
               ),
             ),
@@ -1941,7 +2013,8 @@ class _PagosPageState extends State<PagosPage> {
                         if (mostrarCanceladas) {
                           showDialog(
                             context: context,
-                            builder: (context) => VistaPagoPopup(pago: pago),
+                            builder: (context) =>
+                                VistaPagoPopup(pago: pago),
                           );
                         } else {
                           showDialog(
@@ -2037,7 +2110,8 @@ class _PagarDeudaPopupState extends State<PagarDeudaPopup> {
             onChanged: (value) {
               setState(() {
                 double pagoRealizado = double.tryParse(value) ?? 0;
-                deudaPendiente = widget.pago['monto'] - pagoRealizado;
+                deudaPendiente =
+                    widget.pago['monto'] - pagoRealizado;
               });
             },
           ),

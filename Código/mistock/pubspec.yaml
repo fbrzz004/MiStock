@@ -4,22 +4,24 @@ description: Aplicación Flutter para gestión de inventario y ventas.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
+  sdk: ">=2.17.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_svg: ^1.1.6
+  flutter_svg: ^1.1.6  # Mantener la versión que usabas originalmente
   cupertino_icons: ^1.0.2
   google_fonts: ^4.0.4
-  sqflite: ^2.0.0+4
-  path_provider: ^2.0.11
-  path: ^1.8.2
-  image_picker: ^0.8.5+3
+  sqflite: ^2.4.1
+  path_provider: ^2.1.5
+  path: 1.9.0  # Establecer la versión exacta requerida por flutter_test
+  image_picker: ^1.1.2
+  intl: ^0.20.0  # Añadido si lo estás utilizando
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
@@ -27,3 +29,21 @@ flutter:
     - assets/icons/
     - assets/default_profile.png
     - assets/logo_mistock.png
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo_mistock.png"
+  remove_alpha_ios: true  # Elimina el canal alfa para cumplir con las políticas de Apple
+  min_sdk_android: 21
+
+# Opcional: Forzar la versión de path si es necesario
+dependency_overrides:
+  path: 1.9.0
